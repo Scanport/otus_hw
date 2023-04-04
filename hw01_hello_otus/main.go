@@ -7,7 +7,5 @@ import (
 )
 
 func main() {
-	input := "Hello, OTUS!"
-	output := stringutil.Reverse(input)
-	fmt.Println(output)
+	fmt.Println(stringutil.Reverse("Hello, OTUS!"))
 }

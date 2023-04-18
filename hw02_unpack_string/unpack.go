@@ -17,13 +17,13 @@ func Unpack(s string) (string, error) {
 			isEscaped = false
 			continue
 		}
-		if i == 0 && isDigit(s[i]) {
-			return "", ErrInvalidString
+		err := isValidFirstCharacter(i, s[i])
+		if err != nil {
+			return "", err
 		}
-		if i != len(s)-1 {
-			if isDigit(s[i]) && isDigit(s[i+1]) {
-				return "", ErrInvalidString
-			}
+		err = isValidNumber(i, s)
+		if err != nil {
+			return "", err
 		}
 		if string(s[i]) == "\\" {
 			if isDigit(s[i+1]) || string(s[i+1]) == "\\" {
@@ -33,24 +33,20 @@ func Unpack(s string) (string, error) {
 			}
 			return "", ErrInvalidString
 		}
-		if isDigit(s[i]) {
-			count, err := strconv.Atoi(string(s[i]))
-			if err != nil {
-				return "", ErrInvalidString
-			}
-			if count == 0 {
-				count++
-			}
+		count, err := getCountCurr(i, s)
+		if err != nil {
+			return "", err
+		}
+		if count > 0 {
 			result.WriteString(strings.Repeat(string(s[i-1]), count-1))
 			continue
 		}
-		if i != len(s)-1 {
-			if isDigit(s[i+1]) {
-				count, _ := strconv.Atoi(string(s[i+1]))
-				if count == 0 {
-					continue
-				}
-			}
+		count, err = getCountNext(i, s)
+		if err != nil {
+			return "", err
+		}
+		if count == 0 {
+			continue
 		}
 		result.WriteRune(rune(s[i]))
 	}
@@ -60,4 +56,48 @@ func Unpack(s string) (string, error) {
 
 func isDigit(b byte) bool {
 	return unicode.IsDigit(rune(b))
+}
+
+func isValidFirstCharacter(i int, b byte) error {
+	if i == 0 && isDigit(b) {
+		return ErrInvalidString
+	}
+	return nil
+}
+
+func isValidNumber(i int, s string) error {
+	if i != len(s)-1 {
+		if isDigit(s[i]) && isDigit(s[i+1]) {
+			return ErrInvalidString
+		}
+	}
+	return nil
+}
+
+func getCountCurr(i int, s string) (int, error) {
+	if isDigit(s[i]) {
+		count, err := strconv.Atoi(string(s[i]))
+		if err != nil {
+			return 0, ErrInvalidString
+		}
+		if count == 0 {
+			count++
+		}
+		return count, nil
+	}
+	return -1, nil
+}
+
+func getCountNext(i int, s string) (int, error) {
+	if i != len(s)-1 {
+		if isDigit(s[i+1]) {
+			count, err := strconv.Atoi(string(s[i+1]))
+			if err != nil {
+				return 0, ErrInvalidString
+			}
+			return count, nil
+		}
+		return -1, nil
+	}
+	return -1, nil
 }

@@ -2,9 +2,7 @@ package hw02unpackstring
 
 import (
 	"errors"
-	"strconv"
 	"strings"
-	"unicode"
 )
 
 var ErrInvalidString = errors.New("invalid string")
@@ -34,18 +32,12 @@ func Unpack(s string) (string, error) {
 			}
 			return "", ErrInvalidString
 		}
-		count, err := getCountCurr(i, r)
-		if err != nil {
-			return "", err
-		}
+		count := getCountCurr(i, r)
 		if count > 0 {
 			result.WriteString(strings.Repeat(string(r[i-1]), count-1))
 			continue
 		}
-		count, err = getCountNext(i, r)
-		if err != nil {
-			return "", err
-		}
+		count = getCountNext(i, r)
 		if count == 0 {
 			continue
 		}
@@ -56,7 +48,7 @@ func Unpack(s string) (string, error) {
 }
 
 func isDigit(r rune) bool {
-	return unicode.IsDigit(r)
+	return '0' <= r && r <= '9'
 }
 
 func isValidFirstCharacter(i int, r rune) error {
@@ -75,30 +67,21 @@ func isValidNumber(i int, r []rune) error {
 	return nil
 }
 
-func getCountCurr(i int, r []rune) (int, error) {
+func getCountCurr(i int, r []rune) int {
 	if isDigit(r[i]) {
-		count, err := strconv.Atoi(string(r[i]))
-		if err != nil {
-			return 0, ErrInvalidString
-		}
+		count := int(r[i] - '0')
 		if count == 0 {
 			count++
 		}
-		return count, nil
+		return count
 	}
-	return -1, nil
+	return -1
 }
 
-func getCountNext(i int, r []rune) (int, error) {
-	if i != len(r)-1 {
-		if isDigit(r[i+1]) {
-			count, err := strconv.Atoi(string(r[i+1]))
-			if err != nil {
-				return 0, ErrInvalidString
-			}
-			return count, nil
-		}
-		return -1, nil
+func getCountNext(i int, r []rune) int {
+	if i != len(r)-1 && isDigit(r[i+1]) {
+		count := int(r[i+1] - '0')
+		return count
 	}
-	return -1, nil
+	return -1
 }

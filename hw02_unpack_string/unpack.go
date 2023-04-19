@@ -12,71 +12,72 @@ var ErrInvalidString = errors.New("invalid string")
 func Unpack(s string) (string, error) {
 	var result strings.Builder
 	var isEscaped bool
-	for i := range s {
+	r := []rune(s)
+	for i := range r {
 		if isEscaped {
 			isEscaped = false
 			continue
 		}
-		err := isValidFirstCharacter(i, s[i])
+		err := isValidFirstCharacter(i, r[i])
 		if err != nil {
 			return "", err
 		}
-		err = isValidNumber(i, s)
+		err = isValidNumber(i, r)
 		if err != nil {
 			return "", err
 		}
-		if string(s[i]) == "\\" {
-			if isDigit(s[i+1]) || string(s[i+1]) == "\\" {
-				result.WriteRune(rune(s[i+1]))
+		if string(r[i]) == "\\" {
+			if isDigit(r[i+1]) || string(r[i+1]) == "\\" {
+				result.WriteRune(r[i+1])
 				isEscaped = true
 				continue
 			}
 			return "", ErrInvalidString
 		}
-		count, err := getCountCurr(i, s)
+		count, err := getCountCurr(i, r)
 		if err != nil {
 			return "", err
 		}
 		if count > 0 {
-			result.WriteString(strings.Repeat(string(s[i-1]), count-1))
+			result.WriteString(strings.Repeat(string(r[i-1]), count-1))
 			continue
 		}
-		count, err = getCountNext(i, s)
+		count, err = getCountNext(i, r)
 		if err != nil {
 			return "", err
 		}
 		if count == 0 {
 			continue
 		}
-		result.WriteRune(rune(s[i]))
+		result.WriteRune(r[i])
 	}
 
 	return result.String(), nil
 }
 
-func isDigit(b byte) bool {
-	return unicode.IsDigit(rune(b))
+func isDigit(r rune) bool {
+	return unicode.IsDigit(r)
 }
 
-func isValidFirstCharacter(i int, b byte) error {
-	if i == 0 && isDigit(b) {
+func isValidFirstCharacter(i int, r rune) error {
+	if i == 0 && isDigit(r) {
 		return ErrInvalidString
 	}
 	return nil
 }
 
-func isValidNumber(i int, s string) error {
-	if i != len(s)-1 {
-		if isDigit(s[i]) && isDigit(s[i+1]) {
+func isValidNumber(i int, r []rune) error {
+	if i != len(r)-1 {
+		if isDigit(r[i]) && isDigit(r[i+1]) {
 			return ErrInvalidString
 		}
 	}
 	return nil
 }
 
-func getCountCurr(i int, s string) (int, error) {
-	if isDigit(s[i]) {
-		count, err := strconv.Atoi(string(s[i]))
+func getCountCurr(i int, r []rune) (int, error) {
+	if isDigit(r[i]) {
+		count, err := strconv.Atoi(string(r[i]))
 		if err != nil {
 			return 0, ErrInvalidString
 		}
@@ -88,10 +89,10 @@ func getCountCurr(i int, s string) (int, error) {
 	return -1, nil
 }
 
-func getCountNext(i int, s string) (int, error) {
-	if i != len(s)-1 {
-		if isDigit(s[i+1]) {
-			count, err := strconv.Atoi(string(s[i+1]))
+func getCountNext(i int, r []rune) (int, error) {
+	if i != len(r)-1 {
+		if isDigit(r[i+1]) {
+			count, err := strconv.Atoi(string(r[i+1]))
 			if err != nil {
 				return 0, ErrInvalidString
 			}

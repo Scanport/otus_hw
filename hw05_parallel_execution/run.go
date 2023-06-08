@@ -3,42 +3,55 @@ package hw05parallelexecution
 import (
 	"errors"
 	"sync"
-	"sync/atomic"
 )
 
 var ErrErrorsLimitExceeded = errors.New("errors limit exceeded")
 
 type Task func() error
 
-// Run starts tasks in n goroutines and stops its work when receiving m errors from tasks.
 func Run(tasks []Task, n, m int) error {
-	taskChannel := make(chan Task) // из этого канала воркеры будут получать задачу
-	var errCounter int32
-	var wg sync.WaitGroup
+	taskCh := make(chan Task) // из этого канала воркеры будут получать задачу
+	resCh := make(chan error, n)
 
-	defer close(taskChannel)
+	var errCounter int
+	var wg sync.WaitGroup
 
 	for i := 0; i < n; i++ { // запускаем n-воркеров
 		go func() {
-			var err error
-			for task := range taskChannel {
-				if err = task(); err != nil {
-					atomic.AddInt32(&errCounter, 1)
+			for task := range taskCh {
+				if task == nil {
+					return
 				}
+				resCh <- task()
 				wg.Done()
 			}
 		}()
 	}
-
-	for i := range tasks {
-		wg.Add(1)
-		if atomic.LoadInt32(&errCounter) >= int32(m) {
-			return ErrErrorsLimitExceeded
+	i := 0
+LOOP:
+	for {
+		select {
+		case err := <-resCh:
+			if err != nil {
+				errCounter++
+			}
+			if errCounter == m {
+				break LOOP
+			}
+		default:
+			if i > len(tasks)-1 {
+				break LOOP
+			}
+			wg.Add(1)
+			taskCh <- tasks[i]
+			i++
 		}
-		taskChannel <- tasks[i]
 	}
-
 	wg.Wait()
-
+	close(taskCh)
+	close(resCh)
+	if errCounter >= m {
+		return ErrErrorsLimitExceeded
+	}
 	return nil
 }
